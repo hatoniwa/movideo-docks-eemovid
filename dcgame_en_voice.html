@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pharaoh & JK Adventure Game Ver.2 (Video Edition)</title>
+<style>
+  body {
+    margin: 0;
+    background: #000;
+    color: #fff;
+    font-family: system-ui, sans-serif;
+    text-align: center;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+  }
+
+  .hidden { display: none; }
+
+  .btns {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 15px 0;
+    flex-wrap: wrap;
+  }
+
+  button {
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
+    background: #4caf50;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  button:hover {
+    background: #81c784;
+    transform: translateY(-2px);
+  }
+
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  #exit-btn { background: #2e7d32; }
+
+  .video-wrapper {
+    width: 90%;
+    max-width: 800px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  video {
+    width: 100%;
+    display: none;
+    border: 2px solid #666;
+    border-radius: 10px;
+    background: black;
+  }
+
+  .subtitle {
+    margin-top: 10px;
+    font-size: 20px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    padding: 10px;
+    border-radius: 10px;
+    display: none;
+  }
+
+  #score, #result {
+    margin-top: 10px;
+    font-size: 18px;
+  }
+
+  img.reward-img {
+    width: 90%;
+    max-width: 800px;
+    margin-top: 15px;
+    border: 2px solid #00ff88;
+    border-radius: 10px;
+    display: none;
+  }
+
+  /* 🌿 Start画面に余裕を追加 */
+  #intro {
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #4caf50;
+    border-radius: 10px;
+    padding: 40px 20px;   /* ←上下に余裕 */
+    margin-top: 20px;     /* ←全体を下げる */
+    width: 90%;
+    max-width: 700px;
+  }
+
+  #intro p {
+    font-size: 1.1em;
+    line-height: 1.6;
+    margin-bottom: 25px;
+  }
+
+  #intro button {
+    background: linear-gradient(to top, #66bb6a, #a5d6a7);
+    color: #000;
+    font-size: 1.3em;
+    padding: 15px 40px;
+    border: 2px solid #fff;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(102,255,153,0.3);
+  }
+
+  #intro button:hover {
+    background: linear-gradient(to top, #a5d6a7, #66bb6a);
+    transform: translateY(-2px);
+  }
+</style>
+</head>
+<body>
+  <div id="container">
+    <h2>🎮 Pharaoh & JK Adventure Game (English Edition)</h2>
+
+    <div id="intro">
+      <p>
+        You can play one round per run.<br>
+        Your score depends on the order you press the six buttons.<br>
+        Earn <strong>700+</strong> points to unlock a reward image.
+      </p>
+      <button onclick="startGame()">Start Game</button>
+    </div>
+
+    <div id="game" class="hidden">
+      <div class="btns" id="choices">
+        <button onclick="choose(1)">①</button>
+        <button onclick="choose(2)">②</button>
+        <button onclick="choose(3)">③</button>
+        <button onclick="choose(4)">④</button>
+        <button onclick="choose(5)">⑤</button>
+        <button onclick="choose(6)">⑥</button>
+      </div>
+
+      <div class="video-wrapper">
+        <video id="sceneVideo" controls playsinline></video>
+      </div>
+
+      <div id="subtitle" class="subtitle"></div>
+      <div id="score"></div>
+      <div id="result"></div>
+
+      <img id="reward-img" class="reward-img" />
+
+      <!-- 🔁 Rewardボタン行を下に移動 -->
+      <div class="btns hidden" id="restart-buttons">
+        <button onclick="restartGame()">🔁 Play Again</button>
+        <button id="exit-btn" onclick="exitGame()">▶️ Exit / YouTube</button>
+      </div>
+
+      <div class="btns hidden" id="reward-buttons">
+        <button onclick="showReward('A')">Reward A</button>
+        <button onclick="showReward('B')">Reward B</button>
+        <button onclick="showReward('C')">Reward C</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const REWARD_THRESHOLD = 700; 
+  const videoElement = document.getElementById("sceneVideo");
+  const subtitleEl = document.getElementById("subtitle");
+  const scoreEl = document.getElementById("score");
+  const resultEl = document.getElementById("result");
+  const rewardButtons = document.getElementById("reward-buttons");
+  const rewardImg = document.getElementById("reward-img");
+  const restartButtons = document.getElementById("restart-buttons");
+
+  const sceneFiles = [
+    "01scene_en.mp4","02scene_en.mp4","03scene_en.mp4",
+    "04scene_en.mp4","05scene_en.mp4","06scene_en.mp4"
+  ];
+
+  const subtitles = [
+    "Huh...? Where am I? Inside a pyramid!?",
+    "Pharaoh, this food is unforgettable!",
+    "Yeah, but what about the price!?",
+    "Encounter with the unknown, wasn‘t it !?",
+    "Wait! Isn’t that camel eating my backpack!?",
+    "I feel like we could actually get along!?"
+  ];
+
+  const scores = [80,70,260,255,250,30];
+
+  let totalScore = 0;
+  let used = [];
+  let ended = false; 
+  let rewardUsed = false;
+
+  function startGame(){
+    document.getElementById("intro").classList.add("hidden");
+    document.getElementById("game").classList.remove("hidden");
+    used = [];
+    totalScore = 0;
+    ended = false;
+    rewardUsed = false;
+    updateScore();
+    subtitleEl.style.display = "none";
+    videoElement.style.display = "none";
+    resultEl.textContent = "";
+    
+    rewardButtons.classList.add("hidden"); 
+    restartButtons.classList.add("hidden");
+    rewardImg.style.display = "none";
+    document.querySelectorAll("#choices button").forEach(btn => btn.disabled = false);
+  }
+
+  function choose(num){
+    if(used.includes(num) || ended) return;
+    used.push(num);
+    const index = num - 1;
+    const file = sceneFiles[index];
+    videoElement.src = file;
+    videoElement.style.display = "block";
+    subtitleEl.style.display = "none";
+    videoElement.play();
+
+    videoElement.onended = () => {
+      subtitleEl.textContent = subtitles[index];
+      subtitleEl.style.display = "block";
+      totalScore += scores[index];
+      updateScore();
+      if(used.length === 5) endGame();
+    };
+  }
+
+  function updateScore(){
+    scoreEl.textContent = `Total Score: ${totalScore}`;
+  }
+
+  function endGame(){
+    if (ended) return;
+    ended = true;
+    document.querySelectorAll("#choices button").forEach(btn => btn.disabled = true);
+    const ok = totalScore >= REWARD_THRESHOLD;
+    resultEl.textContent = ok ? "✨ Reward Unlocked! Choose one below:" : "Try Again! Need 700+ points.";
+
+    if (ok) rewardButtons.classList.remove("hidden");
+    restartButtons.classList.remove("hidden");
+  }
+
+  function showReward(type){
+    if (rewardUsed) return;
+    rewardUsed = true;
+    let filename = "";
+    if (type === "A") filename = "scene97.jpg";
+    else if (type === "B") filename = "scene98.jpg";
+    else if (type === "C") filename = "scene99.jpg";
+    rewardImg.src = filename;
+    rewardImg.style.display = "block"; 
+    resultEl.textContent = `🎁 You received Reward ${type}!`;
+    rewardButtons.classList.add("hidden"); 
+  }
+
+  function restartGame(){
+    startGame();
+  }
+
+  function exitGame(){
+    window.open("end_card.html", "_blank");
+  }
+</script>
+</body>
+</html>
