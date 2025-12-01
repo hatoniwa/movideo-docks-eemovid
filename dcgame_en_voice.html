@@ -5,6 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Pharaoh & JK Adventure Game Ver.2 (Video Edition)</title>
 <style>
+<!-- 🌟 MOVIDEO Counter: game5 -->
+<script>
+fetch("https://api.countapi.xyz/hit/hatoniwa/game5")
+  .then(r => r.json())
+  .then(d => {
+    document.getElementById("visitCount").textContent =
+      "👁 Views: " + d.value;
+  })
+  .catch(() => {
+    document.getElementById("visitCount").textContent =
+      "👁 Views: ---";
+  });
+</script>  
   body {
     margin: 0;
     background: #000;
